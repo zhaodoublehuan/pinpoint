@@ -187,6 +187,14 @@ public class ASMClassNodeAdapter {
         return findDeclaredMethod(methodName, desc);
     }
 
+    public List<ASMMethodNodeAdapter> getDeclaredConstructors() {
+        if (this.skipCode) {
+            throw new IllegalStateException("not supported operation, skipCode option is true.");
+        }
+
+        return findDeclaredMethod("<init>");
+    }
+
     public boolean hasDeclaredMethod(final String methodName, final String desc) {
         return findDeclaredMethod(methodName, desc) != null;
     }
@@ -212,6 +220,27 @@ public class ASMClassNodeAdapter {
         }
 
         return null;
+    }
+
+    private List<ASMMethodNodeAdapter> findDeclaredMethod(final String methodName) {
+        if (methodName == null) {
+            return null;
+        }
+
+        final List<MethodNode> declaredMethods = classNode.methods;
+        if (declaredMethods == null) {
+            return null;
+        }
+
+        final List<ASMMethodNodeAdapter> methodNodes = new ArrayList<ASMMethodNodeAdapter>();
+        for (MethodNode methodNode : declaredMethods) {
+            if (!strEquals(methodNode.name, methodName)) {
+                continue;
+            }
+
+            methodNodes.add(new ASMMethodNodeAdapter(getInternalName(), methodNode));
+        }
+        return methodNodes;
     }
 
     private static boolean startWith(String str1, String str2) {

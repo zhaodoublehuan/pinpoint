@@ -8,7 +8,16 @@ toc: false
 disqus: false
 ---
 
-For any other questions, please use the [user group](https://groups.google.com/forum/#!forum/pinpoint_user)
+[Github issues](https://github.com/naver/pinpoint/issues)  
+[Google group](https://groups.google.com/forum/#!forum/pinpoint_user)  
+[Gitter](https://gitter.im/naver/pinpoint)  
+
+Chinese groups
+
+QQ Group: 897594820 | DING Group
+:----------------: | :-----------: 
+![QQ Group](images/NAVERPinpoint.png) | ![DING Group](images/NaverPinpoint交流群-DING.jpg)
+
 
 ### How do I get the call stack view?
 Click on a server node, which will populate the scatter chart on the right. This chart shows all succeeded/failed requests that went through the server. If there are any requests that spike your interest, simply **drag on the scatter chart** to select them. This will bring up the call stack view containing the requests you've selected.

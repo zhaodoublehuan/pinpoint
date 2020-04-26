@@ -160,6 +160,16 @@ public class ASMClass implements InstrumentClass {
     }
 
     @Override
+    public List<InstrumentMethod> getDeclaredConstructors() {
+        final List<InstrumentMethod> candidateList = new ArrayList<InstrumentMethod>();
+        for (ASMMethodNodeAdapter methodNode : this.classNode.getDeclaredConstructors()) {
+            final InstrumentMethod method = new ASMMethod(this.engineComponent, this.pluginContext, this, methodNode);
+            candidateList.add(method);
+        }
+        return candidateList;
+    }
+
+    @Override
     public boolean hasDeclaredMethod(final String methodName, final String... parameterTypes) {
         final String desc = JavaAssistUtils.javaTypeToJvmSignature(parameterTypes);
         return this.classNode.hasDeclaredMethod(methodName, desc);

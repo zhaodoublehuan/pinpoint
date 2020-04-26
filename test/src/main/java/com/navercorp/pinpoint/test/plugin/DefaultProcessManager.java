@@ -113,8 +113,13 @@ public class DefaultProcessManager implements ProcessManager {
             list.addAll(getDebugOptions());
         }
 
+        if (context.getProfile() != null) {
+            list.add("-Dpinpoint.profiler.profiles.active=" + context.getProfile());
+        }
+
         if (context.getConfigFile() != null) {
             list.add("-Dpinpoint.config=" + context.getConfigFile());
+            list.add("-Dpinpoint.config.load.mode=simple");
         }
 
         for (String arg : pluginTestInstance.getVmArgs()) {

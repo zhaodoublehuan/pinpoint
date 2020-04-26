@@ -17,6 +17,7 @@
 package com.navercorp.pinpoint.collector.dao.hbase;
 
 import com.navercorp.pinpoint.collector.dao.TraceDao;
+import com.navercorp.pinpoint.collector.util.CollectorUtils;
 import com.navercorp.pinpoint.common.hbase.HbaseColumnFamily;
 import com.navercorp.pinpoint.common.hbase.HbaseOperations2;
 import com.navercorp.pinpoint.common.hbase.TableDescriptor;
@@ -28,16 +29,17 @@ import com.navercorp.pinpoint.common.server.bo.serializer.trace.v2.SpanChunkSeri
 import com.navercorp.pinpoint.common.server.bo.serializer.trace.v2.SpanSerializerV2;
 import com.navercorp.pinpoint.common.profiler.util.TransactionId;
 
+import com.navercorp.pinpoint.common.util.Assert;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * @author Woonduk Kang(emeroad)
@@ -47,30 +49,39 @@ public class HbaseTraceDaoV2 implements TraceDao {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    @Autowired
-    private HbaseOperations2 hbaseTemplate;
+    private final HbaseOperations2 hbaseTemplate;
 
-    @Autowired
-    private SpanSerializerV2 spanSerializer;
+    private final TableDescriptor<HbaseColumnFamily.Trace> descriptor;
 
-    @Autowired
-    private SpanChunkSerializerV2 spanChunkSerializer;
+    private final SpanSerializerV2 spanSerializer;
 
-    @Autowired
-    @Qualifier("traceRowKeyEncoderV2")
-    private RowKeyEncoder<TransactionId> rowKeyEncoder;
+    private final SpanChunkSerializerV2 spanChunkSerializer;
 
-    @Autowired
-    private TableDescriptor<HbaseColumnFamily.Trace> descriptor;
+    private final RowKeyEncoder<TransactionId> rowKeyEncoder;
+
+    public HbaseTraceDaoV2(@Qualifier("asyncPutHbaseTemplate") HbaseOperations2 hbaseTemplate,
+                           TableDescriptor<HbaseColumnFamily.Trace> descriptor,
+                           @Qualifier("traceRowKeyEncoderV2") RowKeyEncoder<TransactionId> rowKeyEncoder,
+                           SpanSerializerV2 spanSerializer,
+                           SpanChunkSerializerV2 spanChunkSerializer) {
+        this.hbaseTemplate = Objects.requireNonNull(hbaseTemplate, "hbaseTemplate");
+        this.descriptor = Objects.requireNonNull(descriptor, "descriptor");
+        this.rowKeyEncoder = Objects.requireNonNull(rowKeyEncoder, "rowKeyEncoder");
+        this.spanSerializer = Objects.requireNonNull(spanSerializer, "spanSerializer");
+        this.spanChunkSerializer = Assert.requireNonNull(spanChunkSerializer, "spanChunkSerializer");
+    }
 
     @Override
     public boolean insert(final SpanBo spanBo) {
-        if (spanBo == null) {
-            throw new NullPointerException("spanBo");
-        }
+        Objects.requireNonNull(spanBo, "spanBo");
         if (logger.isDebugEnabled()) {
             logger.debug("insert trace: {}", spanBo);
         }
+
+        // Assert agentId
+        CollectorUtils.checkAgentId(spanBo.getAgentId());
+        // Assert applicationName
+        CollectorUtils.checkApplicationName(spanBo.getApplicationId());
 
         long acceptedTime = spanBo.getCollectorAcceptTime();
 
@@ -81,19 +92,13 @@ public class HbaseTraceDaoV2 implements TraceDao {
         this.spanSerializer.serialize(spanBo, put, null);
 
         TableName traceTableName = descriptor.getTableName();
-        boolean success = hbaseTemplate.asyncPut(traceTableName, put);
-        if (!success) {
-            hbaseTemplate.put(traceTableName, put);
-            success = true;
-        }
 
-        return success;
+        return hbaseTemplate.asyncPut(traceTableName, put);
     }
-
-
 
     @Override
     public boolean insertSpanChunk(SpanChunkBo spanChunkBo) {
+        Objects.requireNonNull(spanChunkBo, "spanChunkBo");
 
         TransactionId transactionId = spanChunkBo.getTransactionId();
         final byte[] rowKey = this.rowKeyEncoder.encodeRowKey(transactionId);
@@ -108,16 +113,11 @@ public class HbaseTraceDaoV2 implements TraceDao {
 
         this.spanChunkSerializer.serialize(spanChunkBo, put, null);
 
-        boolean success = false;
         if (!put.isEmpty()) {
             TableName traceTableName = descriptor.getTableName();
-            success = hbaseTemplate.asyncPut(traceTableName, put);
-            if (!success) {
-                hbaseTemplate.put(traceTableName, put);
-                success = true;
-            }
+            return hbaseTemplate.asyncPut(traceTableName, put);
         }
 
-        return success;
+        return false;
     }
 }

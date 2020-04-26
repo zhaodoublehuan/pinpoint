@@ -19,6 +19,8 @@ package com.navercorp.pinpoint.bootstrap.java9.module;
 
 import com.navercorp.pinpoint.bootstrap.module.JavaModule;
 import com.navercorp.pinpoint.bootstrap.module.Providers;
+import com.navercorp.pinpoint.common.util.JvmUtils;
+import com.navercorp.pinpoint.common.util.JvmVersion;
 import jdk.internal.module.Modules;
 
 import java.lang.instrument.Instrumentation;
@@ -38,15 +40,20 @@ public class ModuleSupport {
 
     private final JavaModule javaBaseModule;
     private final JavaModule bootstrapModule;
+    private List<String> allowedProviders;
 
-
-    ModuleSupport(Instrumentation instrumentation) {
+    ModuleSupport(Instrumentation instrumentation, List<String> allowedProviders) {
         if (instrumentation == null) {
             throw new NullPointerException("instrumentation");
+        }
+        if (allowedProviders == null) {
+            throw new NullPointerException("allowedProviders");
         }
         this.instrumentation = instrumentation;
         this.javaBaseModule = wrapJavaModule(Object.class);
         this.bootstrapModule = wrapJavaModule(this.getClass());
+
+        this.allowedProviders = allowedProviders;
 
     }
 
@@ -127,6 +134,11 @@ public class ModuleSupport {
 
         // for Java9DefineClass
         baseModule.addExports("jdk.internal.misc", agentModule);
+        final JvmVersion version = JvmUtils.getVersion();
+        if(version.onOrAfter(JvmVersion.JAVA_12)) {
+            baseModule.addExports("jdk.internal.access", agentModule);
+        }
+        agentModule.addReads(baseModule);
 
         final JavaModule instrumentModule = loadModule("java.instrument");
         agentModule.addReads(instrumentModule);
@@ -164,14 +176,21 @@ public class ModuleSupport {
 
         List<Providers> providersList = agentModule.getProviders();
         for (Providers providers : providersList) {
-//            if (!serviceClassName.equals(providers.getService())) {
-//                // filter unknown service
-//                continue;
-//            }
-            Class<?> serviceClass = forName(providers.getService(), classLoader);
-            List<Class<?>> providerClassList = loadProviderClassList(providers.getProviders(), classLoader);
-            agentModule.addProvides(serviceClass, providerClassList);
+            final String service = providers.getService();
+            if (isAllowedProvider(service)) {
+                logger.info("load provider:" + providers);
+                Class<?> serviceClass = forName(providers.getService(), classLoader);
+                List<Class<?>> providerClassList = loadProviderClassList(providers.getProviders(), classLoader);
+                agentModule.addProvides(serviceClass, providerClassList);
+            }
         }
+    }
+
+    public boolean isAllowedProvider(String serviceName) {
+        for (String allowedProvider : this.allowedProviders) {
+            return allowedProvider.equals(serviceName);
+        }
+        return false;
     }
 
     private List<Class<?>> loadProviderClassList(List<String> classNameList, ClassLoader classLoader) {

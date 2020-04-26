@@ -42,10 +42,14 @@ public class DefaultProfilerConfig implements ProfilerConfig {
 
     private static final CommonLogger logger = StdoutCommonLoggerFactory.INSTANCE.getLogger(DefaultProfilerConfig.class.getName());
 
+    public static final String PLUGIN_DISABLE = "profiler.plugin.disable";
+    // TestAgent only
+    public static final String IMPORT_PLUGIN = "profiler.plugin.import-plugin";
 
     private final Properties properties;
 
     public static final String INSTRUMENT_ENGINE_ASM = "ASM";
+
     private static final TransportModule DEFAULT_TRANSPORT_MODULE = TransportModule.THRIFT;
 
     public static final int DEFAULT_AGENT_STAT_COLLECTION_INTERVAL_MS = 5 * 1000;
@@ -93,6 +97,8 @@ public class DefaultProfilerConfig implements ProfilerConfig {
     }
 
     private boolean profileEnable = false;
+
+    private String activeProfile = Profiles.DEFAULT_ACTIVE_PROFILE;
 
     private String profileInstrumentEngine = INSTRUMENT_ENGINE_ASM;
     private boolean instrumentMatcherEnable = true;
@@ -169,6 +175,12 @@ public class DefaultProfilerConfig implements ProfilerConfig {
         }
         this.properties = properties;
         readPropertyValues();
+    }
+
+
+    @Override
+    public String getActiveProfile() {
+        return activeProfile;
     }
 
     @Override
@@ -653,6 +665,7 @@ public class DefaultProfilerConfig implements ProfilerConfig {
     void readPropertyValues() {
 
         this.profileEnable = readBoolean("profiler.enable", true);
+        this.activeProfile = readString(Profiles.ACTIVE_PROFILE_KEY, Profiles.DEFAULT_ACTIVE_PROFILE);
         this.profileInstrumentEngine = readString("profiler.instrument.engine", INSTRUMENT_ENGINE_ASM);
         this.instrumentMatcherEnable = readBoolean("profiler.instrument.matcher.enable", true);
 
@@ -719,7 +732,7 @@ public class DefaultProfilerConfig implements ProfilerConfig {
 
         this.pluginLoadOrder = readList("profiler.plugin.load.order");
 
-        this.disabledPlugins = readList("profiler.plugin.disable");
+        this.disabledPlugins = readList(PLUGIN_DISABLE);
 
         // TODO have to remove        
         // profile package included in order to test "call stack view".
@@ -852,7 +865,8 @@ public class DefaultProfilerConfig implements ProfilerConfig {
     public String toString() {
         final StringBuilder sb = new StringBuilder("DefaultProfilerConfig{");
         sb.append("properties=").append(properties);
-        sb.append(", profileEnable=").append(profileEnable);
+        sb.append(", profileEnable='").append(profileEnable).append('\'');
+        sb.append(", activeProfile=").append(activeProfile);
         sb.append(", profileInstrumentEngine='").append(profileInstrumentEngine).append('\'');
         sb.append(", instrumentMatcherEnable=").append(instrumentMatcherEnable);
         sb.append(", instrumentMatcherCacheConfig=").append(instrumentMatcherCacheConfig);

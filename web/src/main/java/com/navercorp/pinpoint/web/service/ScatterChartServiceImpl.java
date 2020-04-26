@@ -35,6 +35,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * @author netspider
@@ -45,35 +46,28 @@ public class ScatterChartServiceImpl implements ScatterChartService {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    @Autowired
-    private ApplicationTraceIndexDao applicationTraceIndexDao;
+    private final ApplicationTraceIndexDao applicationTraceIndexDao;
 
-    @Autowired
-    @Qualifier("hbaseTraceDaoFactory")
-    private TraceDao traceDao;
+    private final TraceDao traceDao;
+
+    public ScatterChartServiceImpl(ApplicationTraceIndexDao applicationTraceIndexDao, @Qualifier("hbaseTraceDaoFactory") TraceDao traceDao) {
+        this.applicationTraceIndexDao = Objects.requireNonNull(applicationTraceIndexDao, "applicationTraceIndexDao");
+        this.traceDao = Objects.requireNonNull(traceDao, "traceDao");
+    }
 
     @Override
     public List<Dot> selectScatterData(String applicationName, SelectedScatterArea area, TransactionId offsetTransactionId, int offsetTransactionElapsed, int limit) {
-        if (applicationName == null) {
-            throw new NullPointerException("applicationName");
-        }
-        if (area == null) {
-            throw new NullPointerException("area");
-        }
+        Objects.requireNonNull(applicationName, "applicationName");
+        Objects.requireNonNull(area, "area");
+
         return applicationTraceIndexDao.scanTraceScatter(applicationName, area, offsetTransactionId, offsetTransactionElapsed, limit);
     }
 
     @Override
     public List<Dot> selectScatterData(List<TransactionId> transactionIdList, String applicationName, Filter filter) {
-        if (transactionIdList == null) {
-            throw new NullPointerException("transactionIdList");
-        }
-        if (applicationName == null) {
-            throw new NullPointerException("applicationName");
-        }
-        if (filter == null) {
-            throw new NullPointerException("filter");
-        }
+        Objects.requireNonNull(transactionIdList, "transactionIdList");
+        Objects.requireNonNull(applicationName, "applicationName");
+        Objects.requireNonNull(filter, "filter");
 
         final List<List<SpanBo>> traceList = traceDao.selectAllSpans(transactionIdList);
 
@@ -101,9 +95,8 @@ public class ScatterChartServiceImpl implements ScatterChartService {
      */
     @Override
     public List<SpanBo> selectTransactionMetadata(final List<GetTraceInfo> getTraceInfoList) {
-        if (getTraceInfoList == null) {
-            throw new NullPointerException("query");
-        }
+        Objects.requireNonNull(getTraceInfoList, "getTraceInfoList");
+
         final List<List<SpanBo>> selectedSpans = traceDao.selectSpans(getTraceInfoList);
 
 
@@ -117,26 +110,17 @@ public class ScatterChartServiceImpl implements ScatterChartService {
 
     @Override
     public ScatterData selectScatterData(String applicationName, Range range, int xGroupUnit, int yGroupUnit, int limit, boolean backwardDirection) {
-        if (applicationName == null) {
-            throw new NullPointerException("applicationName");
-        }
-        if (range == null) {
-            throw new NullPointerException("range");
-        }
+        Objects.requireNonNull(applicationName, "applicationName");
+        Objects.requireNonNull(range, "range");
+
         return applicationTraceIndexDao.scanTraceScatterData(applicationName, range, xGroupUnit, yGroupUnit, limit, backwardDirection);
     }
 
     @Override
     public ScatterData selectScatterData(List<TransactionId> transactionIdList, String applicationName, Range range, int xGroupUnit, int yGroupUnit, Filter filter) {
-        if (transactionIdList == null) {
-            throw new NullPointerException("transactionIdList");
-        }
-        if (applicationName == null) {
-            throw new NullPointerException("applicationName");
-        }
-        if (filter == null) {
-            throw new NullPointerException("filter");
-        }
+        Objects.requireNonNull(transactionIdList, "transactionIdList");
+        Objects.requireNonNull(applicationName, "applicationName");
+        Objects.requireNonNull(filter, "filter");
 
         final List<List<SpanBo>> traceList = traceDao.selectAllSpans(transactionIdList);
 
